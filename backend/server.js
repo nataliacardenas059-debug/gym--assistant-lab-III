@@ -1,18 +1,21 @@
+
 require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
 
 const conectarBaseDeDatos = require('./src/configurations/database');
+
+// Rutas del módulo de recepción
 const registroIngresoRoutes = require('./src/routes/registroIngresoRoutes');
 const horarioAdministrativoRoutes = require('./src/routes/horarioAdministrativoRoutes');
 
+// Crear aplicación
 const app = express();
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
-app.use('/api/horarios-administrativos', horarioAdministrativoRoutes);
 
 // Ruta principal
 app.get('/', (req, res) => {
@@ -22,8 +25,14 @@ app.get('/', (req, res) => {
   });
 });
 
-// Rutas de la aplicación
+// Rutas de gestión de personas
+app.use('/api/personas', require('./src/routes/personaRoutes'));
+app.use('/api/membresias', require('./src/routes/membresiaRoutes'));
+app.use('/api/profesores', require('./src/routes/profesorRoutes'));
+
+// Rutas de recepción
 app.use('/api/registros', registroIngresoRoutes);
+app.use('/api/horarios-administrativos', horarioAdministrativoRoutes);
 
 // Iniciar servidor
 async function iniciar() {
@@ -43,4 +52,3 @@ async function iniciar() {
 }
 
 iniciar();
-
