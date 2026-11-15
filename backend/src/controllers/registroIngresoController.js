@@ -398,14 +398,40 @@ const registrarSalida = async (req, res) => {
 // CONSULTAR AFORO ACTUAL
 // ==========================================
 
+const obtenerPersonaPorDocumento = async (req, res) => {
+  try {
+    const documento = String(req.params.documento || '').trim();
+    if (!documento) return res.status(400).json({ mensaje: 'Debes proporcionar un número de documento.' });
+
+    const persona = await Persona.findOne({ numero_documento: documento }).select('-password');
+    if (!persona) return res.status(404).json({ mensaje: 'No se encontró ninguna persona con ese documento.' });
+
+    const registroActivo = await RegistroIngreso.findOne({ personaId: persona._id, estado: 'dentro' });
+    return res.status(200).json({ persona, dentro: Boolean(registroActivo), registroActivo });
+  } catch (error) {
+    console.error('Error al buscar persona para recepción:', error);
+    return res.status(500).json({ mensaje: 'Ocurrió un error al buscar la persona.' });
+  }
+};
+
+// ==========================================
+// CONSULTAR AFORO ACTUAL
+// ==========================================
+
 const obtenerAforoActual = async (req, res) => {
   try {
-    const personasDentro = await RegistroIngreso.countDocuments({
-      estado: 'dentro'
-    });
+    const registrosDentro = await RegistroIngreso.find({ estado: 'dentro' })
+      .populate('personaId', 'nombre_completo numero_documento tipo_documento tipo_persona')
+      .sort({ fecha_hora: 1 });
 
     return res.status(200).json({
-      aforo_actual: personasDentro
+      aforo_actual: registrosDentro.length,
+      personas_dentro: registrosDentro
+        .filter((registro) => registro.personaId)
+        .map((registro) => ({
+          ...registro.personaId.toObject(),
+          fecha_hora_entrada: registro.fecha_hora
+        }))
     });
 
   } catch (error) {
@@ -522,6 +548,7 @@ const obtenerHistorialIngresos = async (req, res) => {
 
 module.exports = {
   validarAcceso,
+  obtenerPersonaPorDocumento,
   registrarEntrada,
   registrarSalida,
   obtenerAforoActual,

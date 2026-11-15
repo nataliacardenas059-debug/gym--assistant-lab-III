@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 
 const {
+  obtenerPersonaPorDocumento,
   registrarEntrada,
   registrarSalida,
   obtenerAforoActual,
@@ -11,6 +12,7 @@ const {
 } = require('../controllers/registroIngresoController');
 
 // Registrar una entrada.
+router.get('/persona/:documento', obtenerPersonaPorDocumento);
 router.post('/entrada', registrarEntrada);
 
 // Registrar una salida.

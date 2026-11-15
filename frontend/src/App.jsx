@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth, RutaProtegida, LoginPage, UsuarioPage } from './modules/acceso';
 import RegistroAccesos from './components/RegistroAccesos';
@@ -6,11 +6,39 @@ import AforoActual from './components/AforoActual';
 import HistorialIngresos from './components/HistorialIngresos';
 import HorariosAdministrativos from './components/HorariosAdministrativos';
 import GestionPersonas from './pages/GestionPersonas';
+import { obtenerAforoActual, obtenerHistorialIngresos } from './services/recepcionService';
 
 function RecepcionApp() {
   const { usuario, salir } = useAuth();
   const nombreRecepcion = usuario?.nombre || 'Recepcionista';
   const [seccionActiva, setSeccionActiva] = useState('Inicio');
+  const [resumen, setResumen] = useState({ dentro: 0, ingresosHoy: 0 });
+
+  useEffect(() => {
+    let activo = true;
+    const cargarResumen = async () => {
+      try {
+        const [aforo, historial] = await Promise.all([
+          obtenerAforoActual(),
+          obtenerHistorialIngresos({ limite: '100' })
+        ]);
+        const hoy = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit'
+        }).format(new Date());
+        const ingresosHoy = (historial.registros || []).filter((r) =>
+          new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit'
+          }).format(new Date(r.fecha_hora)) === hoy
+        ).length;
+        if (activo) setResumen({ dentro: aforo.aforo_actual || 0, ingresosHoy });
+      } catch (error) {
+        console.error('No fue posible cargar el resumen de recepción:', error);
+      }
+    };
+    cargarResumen();
+    const intervalo = setInterval(cargarResumen, 15000);
+    return () => { activo = false; clearInterval(intervalo); };
+  }, []);
 
   const menu = [
     { nombre: 'Inicio', icono: 'bi-house-door' },
