@@ -18,6 +18,10 @@ app.get('/', (req, res) => {
     });
 });
 
+app.use('/api/personas', require('./src/routes/personaRoutes'));
+app.use('/api/membresias', require('./src/routes/membresiaRoutes'));
+app.use('/api/profesores', require('./src/routes/profesorRoutes'));
+
 async function iniciar() {
     await conectarBaseDeDatos();
 
