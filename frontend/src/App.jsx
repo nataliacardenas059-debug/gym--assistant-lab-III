@@ -6,6 +6,7 @@ import AforoActual from './components/AforoActual';
 import HistorialIngresos from './components/HistorialIngresos';
 import HorariosAdministrativos from './components/HorariosAdministrativos';
 import GestionPersonas from './pages/GestionPersonas';
+import MiPerfil from './modules/acceso/MiPerfil';
 import { obtenerAforoActual, obtenerHistorialIngresos } from './services/recepcionService';
 
 function RecepcionApp() {
@@ -47,6 +48,7 @@ function RecepcionApp() {
     { nombre: 'Historial de ingresos', icono: 'bi-clock-history' },
     { nombre: 'Horarios administrativos', icono: 'bi-calendar-check' },
     { nombre: 'Gestión de personas', icono: 'bi-people-fill' },
+    { nombre: 'Mi perfil', icono: 'bi-person-gear' },
   ];
 
   const opciones = [
@@ -263,8 +265,11 @@ function RecepcionApp() {
             <GestionPersonas />
           </section>
 
-        ) : (
+        ) : seccionActiva === 'Mi perfil' ? (
 
+          <section className="dashboard-content"><MiPerfil /></section>
+
+        ) : (
           /* OTRAS SECCIONES */
           <section className="dashboard-content">
             <div className="placeholder-section">
