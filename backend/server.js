@@ -50,5 +50,4 @@ async function iniciar() {
     process.exit(1);
   }
 }
-
 iniciar();

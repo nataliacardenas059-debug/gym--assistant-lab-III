@@ -15,10 +15,13 @@ const membresiaSchema = new mongoose.Schema(
 
     fecha_fin: {
       type: Date,
-      required: true,
+      default: null,
+      required: function () {
+        return this.tipo !== 'chequera';
+      },
       validate: {
         validator: function (fechaFin) {
-          return fechaFin >= this.fecha_inicio;
+          return this.tipo === 'chequera' || (fechaFin && fechaFin >= this.fecha_inicio);
         },
         message: 'La fecha de finalización no puede ser anterior a la fecha de inicio.'
       }

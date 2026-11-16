@@ -1,31 +1,89 @@
-# Integración del módulo de recepción
+# Gym Assistant — paquete de integración
 
-Este paquete contiene los archivos modificados para conectar el frontend de recepción con el backend de MongoDB.
+Esta versión conecta la pantalla **Gestión de personas** del frontend con los endpoints existentes del backend y conserva la integración del módulo de recepción.
 
-## Aplicar los cambios
-1. Descomprime este paquete en la raíz de tu repositorio `gym-assistant-lab-III`, conservando las carpetas `frontend/` y `backend/`. Acepta reemplazar los archivos cuando Windows lo pregunte.
-2. No reemplaces tu archivo `.env`; este paquete no lo incluye.
-3. En una terminal, inicia el backend desde `backend/` con `npm run dev`.
-4. En otra terminal, inicia el frontend desde `frontend/` con `npm run dev`.
-5. Abre el panel de recepción y prueba búsqueda por documento, entrada, salida, aforo, historial y horarios.
+## Antes de iniciar
 
-## Endpoint nuevo
-Se agregó `GET /api/registros/persona/:documento` para que recepción consulte una persona sin depender de `localStorage`. También se amplió `GET /api/registros/aforo` para devolver el conteo y la lista de personas que están dentro.
+- Necesitas Node.js y MongoDB Atlas configurados.
+- Conserva tu archivo `backend/.env` original. Este paquete no contiene credenciales.
+- Si todavía no tienes el archivo, crea `backend/.env` tomando como referencia `.env.example` y completa `MONGODB_URI`.
 
-## Importante
-- El endpoint de búsqueda solo consulta personas ya existentes en MongoDB. El ZIP actual todavía no contiene las rutas CRUD del módulo de personas.
-- El login del frontend sigue siendo simulado y la gestión de personas todavía usa `localStorage`; esta entrega integra el módulo de recepción, no reemplaza el módulo de autenticación ni el CRUD del equipo.
-- Los horarios se leen de MongoDB. Si la colección está vacía, crea las franjas `07:00–08:00` y `17:00–18:00` desde la pantalla de horarios.
-- La capacidad máxima de 30 sigue siendo un valor de presentación del frontend; el backend actual no bloquea entradas al llegar a 30.
-- La consulta del historial muestra hasta 100 visitas recientes.
-- El backend usa `VITE_API_URL` si está definido; de lo contrario consulta `http://localhost:3000`.
+## Instalar dependencias
 
-## Archivos incluidos
-- `frontend/src/services/recepcionService.js` (nuevo)
-- `frontend/src/components/RegistroAccesos.jsx`
-- `frontend/src/components/AforoActual.jsx`
-- `frontend/src/components/HistorialIngresos.jsx`
-- `frontend/src/components/HorariosAdministrativos.jsx`
-- `frontend/src/App.jsx`
-- `backend/src/controllers/registroIngresoController.js`
-- `backend/src/routes/registroIngresoRoutes.js`
+Abre una terminal en `backend/`:
+
+```bash
+npm install
+```
+
+Abre otra terminal en `frontend/`:
+
+```bash
+npm install
+```
+
+## Ejecutar
+
+Terminal 1:
+
+```bash
+cd backend
+npm run dev
+```
+
+Terminal 2:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Abre la dirección local que indique Vite (normalmente `http://localhost:5173`).
+
+## Qué quedó conectado
+
+- Gestión de personas: consulta, creación, edición y cambio de estado mediante `/api/personas`.
+- Membresías: consulta, creación y actualización mediante `/api/membresias`.
+- El frontend convierte el campo `correo_institucional` del formulario al campo `correo` que espera MongoDB.
+- Las membresías mensuales y el beneficio de profesor se adaptan a los valores admitidos por el modelo actual.
+- La pantalla muestra estados de carga y errores de conexión.
+- La integración de recepción se conserva: entradas, salidas, aforo, historial y horarios siguen usando sus servicios existentes.
+
+## Pruebas sugeridas
+
+1. Inicia MongoDB/backend y confirma que `http://localhost:3000/` responde.
+2. Inicia el frontend e ingresa al panel de recepción.
+3. Abre **Gestión de personas** y confirma que la lista carga desde MongoDB.
+4. Registra una persona estudiante con membresía mensual y fecha de vencimiento.
+5. Edita su nombre o correo y guarda.
+6. Desactiva y vuelve a activar la persona.
+7. Registra una persona administrativa y confirma que la membresía aparezca como “No aplica”.
+8. Registra un profesor con beneficio, si tu flujo de negocio ya tiene creado su perfil de profesor.
+9. Comprueba que los registros aparecen en MongoDB y que el módulo de recepción puede buscar por documento.
+
+## Límites importantes que siguen pendientes
+
+- **Autenticación:** el login de este proyecto sigue siendo simulado y consulta datos locales. Esta integración no crea contraseñas en MongoDB ni habilita el inicio de sesión de las personas nuevas. No se debe interpretar el registro de una persona como creación de sus credenciales.
+- **Perfil de profesor:** el formulario de Gestión de personas no captura `tipo_profesor`, horas semanales ni los demás datos del modelo `Profesor`. El beneficio de profesor requiere que exista su perfil correspondiente; no se crea automáticamente desde este formulario.
+- **Membresía chequera:** no se ofrece en el formulario porque requiere `dias_restantes`, dato que la pantalla actual no solicita.
+- **Prueba real:** la compilación de producción y las operaciones contra MongoDB deben ejecutarse en tu equipo con dependencias instaladas y tu `.env` configurado. No se incluyen datos de conexión ni contraseñas.
+
+## Archivos principales modificados
+
+- `frontend/src/services/usuariosService.js`
+- `frontend/src/pages/GestionPersonas.jsx`
+- `frontend/src/components/FormularioUsuario.jsx`
+- `backend/.env.example`
+
+
+## Ajustes del formulario de Gestión de personas
+
+- Las membresías ordinarias disponibles son **mensual** y **por días** (tipo interno `chequera`).
+- La membresía mensual requiere fecha de vencimiento.
+- La membresía por días guarda la cantidad de días comprados en `dias_restantes`, no solicita fecha de finalización y descuenta un día por cada ingreso válido.
+- Al registrar un profesor se debe seleccionar si es **vinculado** o **externo**.
+- Los profesores vinculados se registran en la colección `profesores` con `tipo_profesor: vinculado` y `beneficio_activo: true`; su acceso usa el límite semanal de 120 minutos ya implementado en el backend. No requieren una membresía ordinaria.
+- Los profesores externos no reciben ese beneficio y deben tener una membresía mensual o por días para ingresar.
+- Al editar un profesor vinculado como externo, se actualiza su perfil y se desactiva el beneficio.
+
+Nota: los profesores que ya existían antes de este ajuste deben abrirse y guardarse desde Gestión de personas para crear o completar su perfil de profesor y seleccionar su vinculación.

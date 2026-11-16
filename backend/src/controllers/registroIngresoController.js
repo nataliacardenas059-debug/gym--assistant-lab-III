@@ -93,10 +93,12 @@ const buscarMembresiaValida = async (persona) => {
 
   return membresias.find((membresia) => {
     const fechaInicio = obtenerFechaColombia(membresia.fecha_inicio);
-    const fechaFin = obtenerFechaColombia(membresia.fecha_fin);
+    const fechaFin = membresia.fecha_fin
+      ? obtenerFechaColombia(membresia.fecha_fin)
+      : null;
 
     const dentroDeVigencia =
-      hoy >= fechaInicio && hoy <= fechaFin;
+      hoy >= fechaInicio && (fechaFin === null || hoy <= fechaFin);
 
     if (persona.tipo_persona === 'administrativo') {
       return (
@@ -119,7 +121,8 @@ const buscarMembresiaValida = async (persona) => {
     }
 
     if (membresia.tipo === 'chequera') {
-      return dentroDeVigencia && membresia.dias_restantes > 0;
+      // Las membresías por días no tienen fecha de vencimiento: se consumen por uso.
+      return hoy >= fechaInicio && membresia.dias_restantes > 0;
     }
 
     return false;

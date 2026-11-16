@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import FormularioUsuario from '../components/FormularioUsuario';
 import { actualizarUsuario, cambiarEstadoUsuario, crearUsuario, obtenerUsuarios } from '../services/usuariosService';
 
@@ -11,7 +11,25 @@ const etiquetasMembresia = {
 };
 
 function GestionPersonas() {
-  const [usuarios, setUsuarios] = useState(() => obtenerUsuarios());
+  const [usuarios, setUsuarios] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+
+  const cargarUsuarios = async () => {
+    setCargando(true);
+    try {
+      const lista = await obtenerUsuarios();
+      setUsuarios(lista);
+    } catch (error) {
+      mostrarAviso(error.message || 'No fue posible cargar las personas.', 'danger');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarUsuarios();
+  }, []);
   const [busqueda, setBusqueda] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [filtroEstado, setFiltroEstado] = useState('todos');
@@ -47,38 +65,46 @@ function GestionPersonas() {
     setMensaje('');
   };
 
-  const guardar = (datos) => {
+  const guardar = async (datos) => {
+    setGuardando(true);
     try {
       if (usuarioEditar) {
-        const actualizados = actualizarUsuario(usuarioEditar.id, datos);
-        setUsuarios(actualizados);
+        await actualizarUsuario(usuarioEditar.id, datos, usuarioEditar);
         mostrarAviso('La información de la persona se actualizó correctamente.');
       } else {
-        const nuevo = crearUsuario(datos);
-        setUsuarios((actuales) => [...actuales, nuevo]);
+        await crearUsuario(datos);
         mostrarAviso('La persona se registró correctamente.');
       }
+      await cargarUsuarios();
       setMostrarFormulario(false);
       setUsuarioEditar(null);
     } catch (error) {
+      // Si la persona alcanzó a crearse y falló únicamente la membresía, refrescamos la lista.
+      await cargarUsuarios();
       mostrarAviso(error.message || 'No fue posible guardar la información.', 'danger');
+    } finally {
+      setGuardando(false);
     }
   };
 
-  const cambiarEstado = (usuario) => {
+  const cambiarEstado = async (usuario) => {
     const nuevoEstado = usuario.estado === 'activo' ? 'inactivo' : 'activo';
     const accion = nuevoEstado === 'inactivo' ? 'desactivar' : 'activar';
     if (!window.confirm(`¿Deseas ${accion} a ${usuario.nombre_completo}?`)) return;
-    const actualizados = cambiarEstadoUsuario(usuario.id, nuevoEstado);
-    setUsuarios(actualizados);
-    mostrarAviso(`La persona quedó ${nuevoEstado === 'activo' ? 'activa' : 'inactiva'}.`);
+    try {
+      await cambiarEstadoUsuario(usuario.id, nuevoEstado);
+      await cargarUsuarios();
+      mostrarAviso(`La persona quedó ${nuevoEstado === 'activo' ? 'activa' : 'inactiva'}.`);
+    } catch (error) {
+      mostrarAviso(error.message || 'No fue posible cambiar el estado.', 'danger');
+    }
   };
 
   const contar = (condicion) => usuarios.filter(condicion).length;
 
   const membresiaDe = (usuario) => {
     if (usuario.tipo_persona === 'administrativo' || usuario.rol === 'administrativo') return etiquetasMembresia.no_aplica;
-    if (usuario.membresia_estado === 'activa' && usuario.membresia_fecha_fin) {
+    if (usuario.membresia_estado === 'activa' && usuario.membresia_tipo === 'mensual' && usuario.membresia_fecha_fin) {
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       const vencimiento = new Date(`${usuario.membresia_fecha_fin}T00:00:00`);
@@ -99,10 +125,12 @@ function GestionPersonas() {
 
       {mensaje && <div className={`alert alert-${tipoMensaje} alert-dismissible fade show`} role="alert">{mensaje}<button type="button" className="btn-close" aria-label="Cerrar" onClick={() => setMensaje('')}></button></div>}
 
-      {mostrarFormulario ? (
+      {cargando ? (
+        <div className="text-center py-5"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Cargando...</span></div><p className="text-muted mt-2 mb-0">Consultando personas en el servidor...</p></div>
+      ) : mostrarFormulario ? (
         <div className="card border-0 shadow-sm">
           <div className="card-header bg-white py-3"><h6 className="mb-0">{usuarioEditar ? 'Editar información de la persona' : 'Registrar nueva persona'}</h6></div>
-          <div className="card-body p-3 p-md-4"><FormularioUsuario usuario={usuarioEditar} onGuardar={guardar} onCancelar={() => { setMostrarFormulario(false); setUsuarioEditar(null); }} /></div>
+          <div className="card-body p-3 p-md-4"><FormularioUsuario usuario={usuarioEditar} onGuardar={guardar} guardando={guardando} onCancelar={() => { setMostrarFormulario(false); setUsuarioEditar(null); }} /></div>
         </div>
       ) : (
         <>
@@ -132,12 +160,19 @@ function GestionPersonas() {
                     <tbody>
                       {usuariosFiltrados.map((usuario) => {
                         const membresia = membresiaDe(usuario);
-                        return <tr key={usuario.id}>
-                          <td><div className="fw-semibold">{usuario.nombre_completo}</div><small className="text-muted">ID: {usuario.id}</small></td>
+                        return <tr key={usuario.id || usuario._id}>
+                          <td><div className="fw-semibold">{usuario.nombre_completo}</div><small className="text-muted">Documento: {usuario.numero_documento}</small></td>
                           <td>{usuario.tipo_documento || 'CC'} {usuario.numero_documento}</td>
-                          <td><span className="text-capitalize">{usuario.tipo_persona || usuario.rol || 'Sin clasificar'}</span></td>
+                          <td>
+                            <span className="text-capitalize">{usuario.tipo_persona || usuario.rol || 'Sin clasificar'}</span>
+                            {usuario.tipo_persona === 'profesor' && <div className="small text-muted">{usuario.tipo_profesor === 'vinculado' ? 'Vinculado · beneficio 120 min/semana' : 'Externo'}</div>}
+                          </td>
                           <td><span className={`badge text-bg-${usuario.estado === 'activo' ? 'success' : 'secondary'}`}>{usuario.estado === 'activo' ? 'Activo' : 'Inactivo'}</span></td>
-                          <td><span className={`badge text-bg-${membresia.clase}`}>{membresia.texto}</span>{usuario.membresia_fecha_fin && <div className="small text-muted mt-1">Hasta: {usuario.membresia_fecha_fin}</div>}</td>
+                          <td>
+                            <span className={`badge text-bg-${membresia.clase}`}>{membresia.texto}</span>
+                            {usuario.membresia_tipo === 'chequera' && usuario.membresia_dias_restantes !== '' && <div className="small text-muted mt-1">Días disponibles: {usuario.membresia_dias_restantes}</div>}
+                            {usuario.membresia_tipo === 'mensual' && usuario.membresia_fecha_fin && <div className="small text-muted mt-1">Hasta: {usuario.membresia_fecha_fin}</div>}
+                          </td>
                           <td><div className="d-flex justify-content-end gap-1"><button className="btn btn-sm btn-outline-primary" title="Editar" aria-label={`Editar ${usuario.nombre_completo}`} onClick={() => abrirEdicion(usuario)}><i className="bi bi-pencil-square"></i></button><button className={`btn btn-sm ${usuario.estado === 'activo' ? 'btn-outline-danger' : 'btn-outline-success'}`} title={usuario.estado === 'activo' ? 'Desactivar' : 'Activar'} aria-label={`${usuario.estado === 'activo' ? 'Desactivar' : 'Activar'} ${usuario.nombre_completo}`} onClick={() => cambiarEstado(usuario)}><i className={`bi ${usuario.estado === 'activo' ? 'bi-person-dash' : 'bi-person-check'}`}></i></button></div></td>
                         </tr>;
                       })}
@@ -147,7 +182,7 @@ function GestionPersonas() {
               )}
             </div>
           </div>
-          <p className="text-muted small mt-3 mb-0"><i className="bi bi-info-circle me-1"></i>Los cambios se guardan en el almacenamiento local del navegador. La conexión con el backend se realizará en una etapa posterior.</p>
+          <p className="text-muted small mt-3 mb-0"><i className="bi bi-cloud-check me-1"></i>La información de personas y membresías se consulta y guarda en la base de datos mediante el backend.</p>
         </>
       )}
     </div>

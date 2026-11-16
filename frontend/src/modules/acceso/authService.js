@@ -1,4 +1,20 @@
-import { obtenerUsuarios, guardarUsuarios } from '../../services/usuariosService.js';
+import { usuariosPrueba } from '../../data/usuariosPrueba.js';
+
+// La autenticación sigue en modo simulado y utiliza el almacenamiento local.
+// Gestión de personas, por separado, consulta y modifica los datos del backend.
+const CLAVE_USUARIOS = 'usuariosGym';
+function obtenerUsuarios() {
+  try {
+    const guardados = JSON.parse(localStorage.getItem(CLAVE_USUARIOS) || 'null');
+    return Array.isArray(guardados) ? guardados : usuariosPrueba;
+  } catch {
+    return usuariosPrueba;
+  }
+}
+
+function guardarUsuarios(usuarios) {
+  localStorage.setItem(CLAVE_USUARIOS, JSON.stringify(usuarios));
+}
 
 export const USAR_SIMULADO = true;
 const CORREO_RECEPCION = 'admin@gymassistant.com';
