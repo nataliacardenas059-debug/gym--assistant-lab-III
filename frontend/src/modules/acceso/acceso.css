@@ -1,111 +1,49 @@
-/* GymAssistant - estilos del módulo de acceso.
-   Paleta alineada con recepción y gestión de personas. */
-
-:root {
-  --acc-azul: #173b56;
-  --acc-azul-medio: #28627c;
-  --acc-turquesa: #73c6b6;
-  --acc-fondo: #f4f6f9;
-  --acc-texto: #263445;
-  --acc-muted: #758293;
-  --acc-borde: #e5e9ee;
-  --acc-blanco: #ffffff;
-}
-
-/* ---------- INICIO DE SESIÓN ---------- */
-.acc-login-body {
+/* Login moderno basado en Bootstrap 5 */
+.login-page {
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-  background: linear-gradient(120deg, var(--acc-azul), var(--acc-azul-medio));
-  font-family: Arial, Helvetica, sans-serif;
-  color: var(--acc-texto);
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 15% 20%, #2c7188 0, transparent 35%),
+              linear-gradient(135deg, #102b40 0%, #174c63 55%, #1b6571 100%);
+  color: #1d3343;
 }
-
-.acc-login-card {
-  width: 420px;
-  max-width: 100%;
-  padding: 38px 36px;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 14px;
-  background: var(--acc-blanco);
-  box-shadow: 0 16px 40px rgba(8, 31, 48, 0.22);
-  text-align: center;
+.login-decoration {
+  position: absolute;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 50%;
+  pointer-events: none;
 }
-
-.acc-login-card h2 {
-  margin: 0 0 9px;
-  color: var(--acc-azul);
-  font-size: 25px;
-  font-weight: 700;
+.login-decoration-one { width: 520px; height: 520px; top: -260px; right: -130px; }
+.login-decoration-two { width: 360px; height: 360px; bottom: -200px; left: -100px; }
+.login-card {
+  position: relative;
+  z-index: 1;
+  border-radius: 24px;
+  padding: clamp(26px, 5vw, 44px);
+  background: rgba(255,255,255,.98);
 }
-
-.acc-login-card p {
-  margin: 0 0 22px;
-  color: var(--acc-muted);
-  font-size: 14px;
-  line-height: 1.5;
+.login-brand-icon {
+  width: 62px; height: 62px; margin: 0 auto 20px;
+  display: grid; place-items: center; border-radius: 19px;
+  color: #fff; font-size: 27px;
+  background: linear-gradient(135deg, #1b536d, #2d8a88);
+  box-shadow: 0 10px 24px rgba(27,83,109,.24);
 }
-
-.acc-login-card form {
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
+.login-eyebrow { color: #39827f; font-size: .68rem; letter-spacing: .16em; font-weight: 800; }
+.login-card .form-control, .login-card .input-group-text, .login-card .btn {
+  border-radius: 10px;
 }
-
-.acc-login-card input {
-  width: 100%;
-  min-height: 46px;
-  margin: 0;
-  padding: 12px 14px;
-  border: 1px solid #d7dfe6;
-  border-radius: 8px;
-  background: #fff;
-  color: var(--acc-texto);
-  font-size: 14px;
-  box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.login-card .input-group .input-group-text { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.login-card .input-group .form-control { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.login-card .form-control:focus { border-color: #55a69b; box-shadow: 0 0 0 .2rem rgba(85,166,155,.16); }
+.btn-login {
+  border: 0; color: white; font-weight: 700;
+  background: linear-gradient(110deg, #173f59, #247d80);
+  box-shadow: 0 8px 18px rgba(23,63,89,.18);
 }
-
-.acc-login-card input::placeholder { color: #9aa6b2; }
-.acc-login-card input:focus {
-  outline: none;
-  border-color: var(--acc-turquesa);
-  box-shadow: 0 0 0 3px rgba(115, 198, 182, 0.2);
-}
-
-.acc-btn-primary {
-  width: 100%;
-  min-height: 46px;
-  margin-top: 3px;
-  padding: 12px 16px;
-  border: 1px solid var(--acc-azul);
-  border-radius: 8px;
-  background: var(--acc-azul);
-  color: white;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.2s;
-}
-
-.acc-btn-primary:hover:not(:disabled) {
-  border-color: var(--acc-azul-medio);
-  background: var(--acc-azul-medio);
-  transform: translateY(-1px);
-}
-.acc-btn-primary:disabled { opacity: 0.65; cursor: wait; }
-.acc-login-card .acc-error { margin: 15px 0 0; color: #c0392b; font-size: 13px; }
-.acc-login-card .acc-demo {
-  margin: 20px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--acc-borde);
-  color: #8793a1;
-  font-size: 11px;
-  line-height: 1.5;
-}
+.btn-login:hover:not(:disabled) { color: white; filter: brightness(1.08); transform: translateY(-1px); }
+.btn-login:disabled { opacity: .7; }
+.login-footer { border-top: 1px solid #e8edf0; color: #82919d; font-size: .78rem; }
 
 /* ---------- PORTAL DEL USUARIO ---------- */
 .acc-layout {
@@ -286,6 +224,61 @@
 .acc-tabla tbody tr:last-child td { border-bottom: 0; }
 .acc-tabla tbody tr:hover { background: #f5faf9; }
 
+
+/* Identidad visual y controles del portal del usuario */
+.acc-layout {
+  --acc-fondo: #f4f7fa;
+  --acc-texto: #243746;
+  --acc-azul: #173f59;
+  --acc-azul-medio: #247d80;
+  --acc-turquesa: #55b6a6;
+  --acc-borde: #dfe7ed;
+}
+.acc-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.acc-brand .bi { color: #73c8bd; font-size: 1.35rem; }
+.acc-nav-btn { display: flex; align-items: center; gap: 11px; }
+.acc-nav-btn .bi { width: 18px; font-size: 1rem; text-align: center; }
+.acc-btn-logout { display: flex; align-items: center; justify-content: center; }
+
+/* En modo claro, los formularios del perfil mantienen contraste alto. */
+.acc-layout:not(.acc-oscuro) .acc-card { color: #243746; }
+.acc-layout:not(.acc-oscuro) .acc-card h3,
+.acc-layout:not(.acc-oscuro) .acc-card .form-label { color: #243746; }
+.acc-layout:not(.acc-oscuro) .acc-card .form-control {
+  color: #212529;
+  background-color: #fff;
+  border-color: #ced8e0;
+}
+.acc-layout:not(.acc-oscuro) .acc-card .form-control:disabled {
+  color: #495057;
+  background-color: #e9ecef;
+}
+.acc-layout:not(.acc-oscuro) .acc-card .form-control::placeholder { color: #6c757d; opacity: 1; }
+.acc-layout:not(.acc-oscuro) .acc-card .form-text { color: #596875; }
+.acc-layout:not(.acc-oscuro) .acc-card .form-control:focus {
+  border-color: #5b9db8;
+  box-shadow: 0 0 0 .2rem rgba(36, 125, 128, .16);
+}
+
+/* Contraste coherente para el formulario cuando se activa el modo oscuro. */
+.acc-oscuro .acc-card .form-label,
+.acc-oscuro .acc-card h3 { color: #f0f5f8; }
+.acc-oscuro .acc-card .form-control {
+  color: #edf3f6;
+  background-color: #172a35;
+  border-color: #526875;
+}
+.acc-oscuro .acc-card .form-control:disabled {
+  color: #c4d0d7;
+  background-color: #2b414d;
+}
+.acc-oscuro .acc-card .form-control::placeholder,
+.acc-oscuro .acc-card .form-text { color: #b5c3cc; }
+
 /* Modo oscuro conservado y adaptado a la paleta */
 .acc-oscuro { background: #15232d; color: #e8eef2; }
 .acc-oscuro .acc-main { background: #15232d; }
@@ -339,40 +332,3 @@
   .acc-login-card { padding: 30px 22px; }
   .acc-login-card h2 { font-size: 22px; }
 }
-
-/* ---------- AUTENTICACIÓN: PERFIL Y CONTRASEÑA ---------- */
-.acc-btn-link {
-  width: 100%;
-  margin-top: 10px;
-  padding: 6px;
-  border: none;
-  background: none;
-  color: var(--acc-azul);
-  font-size: 13px;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.acc-form {
-  display: grid;
-  gap: 10px;
-  max-width: 380px;
-}
-.acc-form label { font-size: 13px; font-weight: 600; color: var(--acc-texto); }
-.acc-form input {
-  width: 100%;
-  min-height: 42px;
-  padding: 10px 12px;
-  border: 1px solid #d7dfe6;
-  border-radius: 8px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-.acc-form input:focus {
-  outline: none;
-  border-color: var(--acc-turquesa);
-  box-shadow: 0 0 0 3px rgba(115, 198, 182, 0.2);
-}
-.acc-form .acc-error { margin: 0; color: #c0392b; font-size: 13px; }
-.acc-form .acc-ok { margin: 0; color: #1e8449; font-size: 13px; }
-.acc-oscuro .acc-form label { color: #e8eef2; }

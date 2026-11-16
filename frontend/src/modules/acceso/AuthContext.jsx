@@ -14,12 +14,7 @@ export const rutaInicio = (rol) => RUTAS_POR_ROL[rol] || '/login';
 function leerSesion() {
   try {
     const sesion = JSON.parse(localStorage.getItem(CLAVE));
-    // Las sesiones del modo simulado no tienen token: se descartan.
-    if (!sesion?.token) {
-      localStorage.removeItem(CLAVE);
-      return null;
-    }
-    return sesion;
+    return sesion?.token && sesion?.rol ? sesion : null;
   } catch {
     return null;
   }
@@ -35,13 +30,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const salir = useCallback(() => {
+    clearTimeout(temporizador.current);
     localStorage.removeItem(CLAVE);
     setUsuario(null);
   }, []);
 
   useEffect(() => {
     if (!usuario) return undefined;
-
     const reiniciar = () => {
       clearTimeout(temporizador.current);
       temporizador.current = setTimeout(() => {
@@ -49,11 +44,9 @@ export function AuthProvider({ children }) {
         salir();
       }, INACTIVIDAD_MS);
     };
-
     const eventos = ['mousemove', 'keydown', 'click'];
     eventos.forEach((evento) => window.addEventListener(evento, reiniciar));
     reiniciar();
-
     return () => {
       clearTimeout(temporizador.current);
       eventos.forEach((evento) => window.removeEventListener(evento, reiniciar));

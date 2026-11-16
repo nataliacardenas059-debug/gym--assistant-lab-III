@@ -1,33 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const c = require('../controllers/authController');
+const { autenticar } = require('../middlewares/autenticacion');
 
-const {
-  iniciarSesion,
-  crearPasswordPrimerIngreso,
-  cambiarPassword,
-  restablecerPassword,
-  obtenerPerfil,
-  obtenerMiMembresia,
-  obtenerMisIngresos,
-  obtenerAforoUsuario,
-  registrarMiSalida
-} = require('../controllers/authController');
-
-const { verificarToken, soloRecepcion } = require('../middlewares/authMiddleware');
-
-// Públicas
-router.post('/login', iniciarSesion);
-router.post('/primer-ingreso', crearPasswordPrimerIngreso);
-
-// Cualquier persona con sesión
-router.get('/perfil', verificarToken, obtenerPerfil);
-router.put('/cambiar-password', verificarToken, cambiarPassword);
-router.get('/mi-membresia', verificarToken, obtenerMiMembresia);
-router.get('/mis-ingresos', verificarToken, obtenerMisIngresos);
-router.get('/aforo', verificarToken, obtenerAforoUsuario);
-router.post('/mi-salida', verificarToken, registrarMiSalida);
-
-// Solo recepción
-router.patch('/restablecer-password/:id', ...soloRecepcion, restablecerPassword);
+router.post('/login', c.iniciarSesion);
+router.post('/primer-ingreso', c.establecerPrimerPassword);
+router.get('/perfil', autenticar, c.obtenerPerfil);
+router.put('/perfil', autenticar, c.actualizarPerfil);
+router.put('/cambiar-password', autenticar, c.cambiarPassword);
+router.get('/mi-membresia', autenticar, c.obtenerMiMembresia);
+router.get('/mis-ingresos', autenticar, c.obtenerMisIngresos);
+router.post('/mi-salida', autenticar, c.registrarMiSalida);
 
 module.exports = router;

@@ -1,6 +1,9 @@
-import { encabezadoAutorizacion, manejarSesionVencida } from '../modules/acceso/sesion';
-
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+
+function obtenerToken() {
+  try { return JSON.parse(localStorage.getItem('gym_sesion') || 'null')?.token || ''; }
+  catch { return ''; }
+}
 
 async function solicitar(ruta, opciones = {}) {
   let respuesta;
@@ -9,7 +12,7 @@ async function solicitar(ruta, opciones = {}) {
       ...opciones,
       headers: {
         ...(opciones.body ? { 'Content-Type': 'application/json' } : {}),
-        ...encabezadoAutorizacion(),
+        ...(obtenerToken() ? { Authorization: `Bearer ${obtenerToken()}` } : {}),
         ...opciones.headers,
       },
     });
@@ -19,7 +22,6 @@ async function solicitar(ruta, opciones = {}) {
 
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
-    manejarSesionVencida(respuesta);
     throw new Error(datos.mensaje || `Error ${respuesta.status} al consultar el servidor.`);
   }
   return datos;
