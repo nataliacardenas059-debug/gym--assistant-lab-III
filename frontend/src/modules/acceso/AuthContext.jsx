@@ -13,7 +13,13 @@ export const rutaInicio = (rol) => RUTAS_POR_ROL[rol] || '/login';
 
 function leerSesion() {
   try {
-    return JSON.parse(localStorage.getItem(CLAVE));
+    const sesion = JSON.parse(localStorage.getItem(CLAVE));
+    // Las sesiones del modo simulado no tienen token: se descartan.
+    if (!sesion?.token) {
+      localStorage.removeItem(CLAVE);
+      return null;
+    }
+    return sesion;
   } catch {
     return null;
   }

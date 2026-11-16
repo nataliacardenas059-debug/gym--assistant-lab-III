@@ -339,3 +339,40 @@
   .acc-login-card { padding: 30px 22px; }
   .acc-login-card h2 { font-size: 22px; }
 }
+
+/* ---------- AUTENTICACIÓN: PERFIL Y CONTRASEÑA ---------- */
+.acc-btn-link {
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px;
+  border: none;
+  background: none;
+  color: var(--acc-azul);
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.acc-form {
+  display: grid;
+  gap: 10px;
+  max-width: 380px;
+}
+.acc-form label { font-size: 13px; font-weight: 600; color: var(--acc-texto); }
+.acc-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #d7dfe6;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.acc-form input:focus {
+  outline: none;
+  border-color: var(--acc-turquesa);
+  box-shadow: 0 0 0 3px rgba(115, 198, 182, 0.2);
+}
+.acc-form .acc-error { margin: 0; color: #c0392b; font-size: 13px; }
+.acc-form .acc-ok { margin: 0; color: #1e8449; font-size: 13px; }
+.acc-oscuro .acc-form label { color: #e8eef2; }

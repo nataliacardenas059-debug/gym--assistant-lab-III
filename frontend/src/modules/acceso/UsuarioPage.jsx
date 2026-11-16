@@ -4,6 +4,7 @@ import { registrarSalida } from './authService';
 import MiMembresia from './MiMembresia';
 import MiAforo from './MiAforo';
 import MisIngresos from './MisIngresos';
+import MiPerfil from './MiPerfil';
 import './acceso.css';
 
 const SECCIONES = [
@@ -11,6 +12,7 @@ const SECCIONES = [
   { id: 'membresia', etiqueta: '💳 Mi Membresía' },
   { id: 'aforo', etiqueta: '👥 Aforo' },
   { id: 'ingresos', etiqueta: '📋 Mis Ingresos' },
+  { id: 'perfil', etiqueta: '👤 Mi Perfil' },
 ];
 
 export default function UsuarioPage() {
@@ -20,7 +22,7 @@ export default function UsuarioPage() {
   const [recargar, setRecargar] = useState(0);
 
   async function handleSalida() {
-    const res = await registrarSalida(usuario);
+    const res = await registrarSalida();
     alert(res.mensaje || 'Salida registrada');
     setRecargar((n) => n + 1); // refresca el historial
   }
@@ -98,6 +100,13 @@ export default function UsuarioPage() {
           <section className="acc-seccion">
             <h2>Mis Ingresos</h2>
             <MisIngresos usuarioId={usuario.id} recargar={recargar} />
+          </section>
+        )}
+
+        {seccion === 'perfil' && (
+          <section className="acc-seccion">
+            <h2>Mi Perfil</h2>
+            <MiPerfil />
           </section>
         )}
       </main>
