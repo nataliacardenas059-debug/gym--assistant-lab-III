@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 const ITERACIONES = 16384;
 const LONGITUD = 64;
@@ -15,17 +16,36 @@ function hashPassword(password) {
 
 function verificarPassword(password, almacenada) {
   return new Promise((resolve, reject) => {
-    if (typeof almacenada !== 'string' || !almacenada.startsWith('scrypt$')) {
-      // Compatibilidad temporal con contraseñas antiguas en texto plano.
+    if (typeof almacenada !== 'string') {
+      return resolve(false);
+    }
+
+    // Compatibilidad con contraseñas antiguas cifradas con bcrypt.
+    if (/^\$2[aby]\$/.test(almacenada)) {
+      return bcrypt.compare(password, almacenada)
+        .then(resolve)
+        .catch(reject);
+    }
+
+    // Validación de contraseñas cifradas con scrypt.
+    if (!almacenada.startsWith('scrypt$')) {
       return resolve(almacenada === password);
     }
+
     const [, salt, hash] = almacenada.split('$');
+
     if (!salt || !hash) return resolve(false);
+
     crypto.scrypt(password, salt, LONGITUD, { N: ITERACIONES }, (error, derivedKey) => {
       if (error) return reject(error);
+
       const esperado = Buffer.from(hash, 'hex');
       const recibido = derivedKey;
-      resolve(esperado.length === recibido.length && crypto.timingSafeEqual(esperado, recibido));
+
+      resolve(
+        esperado.length === recibido.length &&
+        crypto.timingSafeEqual(esperado, recibido)
+      );
     });
   });
 }
