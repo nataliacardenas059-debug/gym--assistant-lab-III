@@ -14,10 +14,23 @@ const registroIngresoSchema = new mongoose.Schema(
       required: true
     },
 
+    // Método físico por el que se registró la entrada.
     metodo_ingreso: {
       type: String,
       trim: true,
       default: null
+    },
+
+    // Modalidad que autorizó el acceso.
+    modalidad_acceso: {
+      type: String,
+      enum: [
+        'beneficio_profesor_vinculado',
+        'membresia',
+        'beneficio_administrativo',
+        'recepcionista'
+      ],
+      required: true
     },
 
     hora_salida: {
@@ -42,7 +55,6 @@ const registroIngresoSchema = new mongoose.Schema(
   }
 );
 
-
 registroIngresoSchema.pre('validate', function () {
   if (this.estado === 'dentro' && this.hora_salida !== null) {
     this.invalidate(
@@ -58,17 +70,13 @@ registroIngresoSchema.pre('validate', function () {
     );
   }
 
-  if (
-    this.hora_salida &&
-    this.hora_salida < this.fecha_hora
-  ) {
+  if (this.hora_salida && this.hora_salida < this.fecha_hora) {
     this.invalidate(
       'hora_salida',
       'La hora de salida no puede ser anterior a la entrada.'
     );
   }
 });
-
 
 registroIngresoSchema.index(
   { personaId: 1 },
@@ -85,3 +93,4 @@ module.exports = mongoose.model(
   registroIngresoSchema,
   'registros_ingreso'
 );
+

@@ -1,127 +1,208 @@
-import { usuariosPrueba } from '../data/usuariosPrueba.js';
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 
-const CLAVE_USUARIOS = 'usuariosGym';
-
-export function obtenerUsuarios() {
+async function solicitar(ruta, opciones = {}) {
+  let respuesta;
   try {
-    const guardados = localStorage.getItem(CLAVE_USUARIOS);
-    if (!guardados) return usuariosPrueba;
-
-    const lista = JSON.parse(guardados);
-    if (!Array.isArray(lista)) return usuariosPrueba;
-
-    // Completa los registros de prueba antiguos que aún no tenían correo/clave.
-    const actualizados = lista.map((usuario) => {
-      const semilla = usuariosPrueba.find((item) => item.id === usuario.id);
-      return {
-        ...usuario,
-        correo_institucional: usuario.correo_institucional || semilla?.correo_institucional || '',
-        password: usuario.password || semilla?.password || '',
-      };
+    respuesta = await fetch(`${API_URL}${ruta}`, {
+      ...opciones,
+      headers: {
+        ...(opciones.body ? { 'Content-Type': 'application/json' } : {}),
+        ...opciones.headers,
+      },
     });
+  } catch {
+    throw new Error('No fue posible conectar con el servidor. Verifica que el backend esté encendido.');
+  }
 
-    // Guarda la migración para que el inicio de sesión pueda usar los mismos datos.
-    if (JSON.stringify(actualizados) !== JSON.stringify(lista)) {
-      localStorage.setItem(CLAVE_USUARIOS, JSON.stringify(actualizados));
+  const datos = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) {
+    const detalle = Array.isArray(datos.errores) ? `: ${datos.errores.join(', ')}` : '';
+    throw new Error(`${datos.mensaje || `Error ${respuesta.status} al consultar el servidor.`}${detalle}`);
+  }
+  return datos;
+}
+
+const hoyISO = () => {
+  const ahora = new Date();
+  const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
+const fechaISO = (valor) => valor ? new Date(valor).toISOString().slice(0, 10) : '';
+
+function normalizarPersona(persona, membresia, profesor) {
+  const esAdministrativo = persona.tipo_persona === 'administrativo';
+  const esVinculado = persona.tipo_persona === 'profesor' && profesor?.tipo_profesor === 'vinculado';
+  return {
+    ...persona,
+    id: persona._id,
+    correo_institucional: persona.correo || '',
+    rol: persona.rol || 'usuario',
+    membresia_id: membresia?._id || null,
+    membresia_estado: esAdministrativo || esVinculado
+      ? 'no_aplica'
+      : (membresia?.estado || 'sin_informacion'),
+    membresia_tipo: membresia?.tipo || 'mensual',
+    membresia_fecha_inicio: fechaISO(membresia?.fecha_inicio),
+    membresia_fecha_fin: fechaISO(membresia?.fecha_fin),
+    membresia_dias_restantes: membresia?.dias_restantes ?? '',
+    tipo_acceso: esAdministrativo ? 'administrativo' : (esVinculado ? 'beneficio_profesor_vinculado' : 'membresia'),
+    profesor_id: profesor?._id || null,
+    tipo_profesor: profesor?.tipo_profesor || '',
+    beneficio_activo: profesor?.beneficio_activo ?? false,
+  };
+}
+
+export async function obtenerUsuarios() {
+  const [personas, membresias, profesores] = await Promise.all([
+    solicitar('/api/personas'),
+    solicitar('/api/membresias'),
+    solicitar('/api/profesores'),
+  ]);
+
+  const membresiasPorPersona = new Map();
+  membresias.forEach((m) => {
+    const personaId = typeof m.personaId === 'object' ? m.personaId?._id : m.personaId;
+    if (!personaId) return;
+    const anterior = membresiasPorPersona.get(String(personaId));
+    if (!anterior || (m.estado === 'activa' && anterior.estado !== 'activa')) {
+      membresiasPorPersona.set(String(personaId), m);
     }
-    return actualizados;
-  } catch (error) {
-    console.error('No fue posible leer los usuarios guardados:', error);
-    return usuariosPrueba;
-  }
+  });
+
+  const profesoresPorPersona = new Map();
+  profesores.forEach((profesor) => {
+    const personaId = typeof profesor.personaId === 'object' ? profesor.personaId?._id : profesor.personaId;
+    if (personaId) profesoresPorPersona.set(String(personaId), profesor);
+  });
+
+  return personas.map((persona) => normalizarPersona(
+    persona,
+    membresiasPorPersona.get(String(persona._id)),
+    profesoresPorPersona.get(String(persona._id)),
+  ));
 }
 
-export function guardarUsuarios(usuarios) {
-  localStorage.setItem(CLAVE_USUARIOS, JSON.stringify(usuarios));
-}
-
-export function crearUsuario(datos) {
-  const usuarios = obtenerUsuarios();
-  const documentoExiste = usuarios.some(
-    (usuario) => usuario.numero_documento === datos.numero_documento.trim()
-  );
-
-  if (documentoExiste) {
-    throw new Error('Ya existe una persona registrada con ese documento.');
-  }
-  if (usuarios.some((usuario) => usuario.correo_institucional?.toLowerCase() === datos.correo_institucional.trim().toLowerCase())) {
-    throw new Error('Ya existe una persona registrada con ese correo.');
-  }
-
-  const nuevoUsuario = {
-    id: Date.now(),
+function datosPersona(datos) {
+  return {
     nombre_completo: datos.nombre_completo.trim(),
-    correo_institucional: datos.correo_institucional.trim().toLowerCase(),
-    password: datos.password,
+    correo: datos.correo_institucional.trim().toLowerCase(),
     numero_documento: datos.numero_documento.trim(),
     tipo_documento: datos.tipo_documento,
     tipo_persona: datos.tipo_persona,
-    rol: datos.tipo_persona,
     estado: datos.estado,
-    sesion_activa: 0,
-    tipo_acceso: datos.tipo_persona === 'administrativo' ? 'administrativo' : datos.tipo_acceso,
-    membresia_estado: datos.tipo_persona === 'administrativo' ? 'no_aplica' : datos.membresia_estado,
-    membresia_tipo: datos.membresia_tipo,
-    membresia_fecha_fin: datos.membresia_fecha_fin || '',
-    ultima_asistencia: null,
-    ultima_actividad: null,
+    tipo_acceso: datos.tipo_persona === 'administrativo'
+      ? undefined
+      : (datos.tipo_persona === 'profesor' && datos.tipo_profesor === 'vinculado' ? 'beneficio' : 'membresia'),
+  };
+}
+
+async function guardarMembresia(personaId, datos, usuarioActual = null) {
+  const noRequiereMembresia = datos.tipo_persona === 'administrativo' ||
+    (datos.tipo_persona === 'profesor' && datos.tipo_profesor === 'vinculado') ||
+    datos.membresia_estado === 'no_aplica' ||
+    datos.membresia_estado === 'sin_informacion';
+
+  if (noRequiereMembresia) {
+    if (usuarioActual?.membresia_id && usuarioActual.membresia_estado === 'activa') {
+      await solicitar(`/api/membresias/${usuarioActual.membresia_id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: 'inactiva' }),
+      });
+    }
+    return;
+  }
+
+  const esChequera = datos.membresia_tipo === 'chequera';
+  const dias = Number(datos.membresia_dias_restantes);
+  if (esChequera && (!Number.isInteger(dias) || dias < 1)) {
+    throw new Error('Indica la cantidad de días comprados (mínimo 1).');
+  }
+  if (!esChequera && !datos.membresia_fecha_fin) {
+    throw new Error('Selecciona la fecha de vencimiento de la membresía mensual.');
+  }
+
+  const payload = {
+    fecha_inicio: usuarioActual?.membresia_fecha_inicio || hoyISO(),
+    fecha_fin: esChequera ? null : datos.membresia_fecha_fin,
+    tipo: esChequera ? 'chequera' : 'mensual',
+    dias_restantes: esChequera ? dias : null,
+    estado: datos.membresia_estado,
+    tipo_beneficio: 'ninguno',
   };
 
-  guardarUsuarios([...usuarios, nuevoUsuario]);
-  return nuevoUsuario;
+  if (usuarioActual?.membresia_id) {
+    await solicitar(`/api/membresias/${usuarioActual.membresia_id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  } else {
+    await solicitar('/api/membresias', {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, personaId }),
+    });
+  }
 }
 
-export function actualizarUsuario(id, datos) {
-  const usuarios = obtenerUsuarios();
-  const documentoExiste = usuarios.some(
-    (usuario) =>
-      usuario.numero_documento === datos.numero_documento.trim() &&
-      usuario.id !== id
-  );
-
-  if (documentoExiste) {
-    throw new Error('Otro usuario ya tiene registrado ese documento.');
+async function guardarPerfilProfesor(personaId, datos, usuarioActual = null) {
+  if (datos.tipo_persona !== 'profesor') {
+    if (usuarioActual?.profesor_id) {
+      await solicitar(`/api/profesores/${usuarioActual.profesor_id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ beneficio_activo: false }),
+      });
+    }
+    return;
   }
-  if (usuarios.some((usuario) =>
-    usuario.correo_institucional?.toLowerCase() === datos.correo_institucional.trim().toLowerCase() &&
-    usuario.id !== id
-  )) {
-    throw new Error('Otro usuario ya tiene registrado ese correo.');
+  const tipoProfesor = datos.tipo_profesor;
+  if (!['vinculado', 'externo'].includes(tipoProfesor)) {
+    throw new Error('Selecciona si el profesor es vinculado o externo.');
   }
+  const payload = {
+    tipo_profesor: tipoProfesor,
+    beneficio_activo: tipoProfesor === 'vinculado',
+  };
+  if (usuarioActual?.profesor_id) {
+    await solicitar(`/api/profesores/${usuarioActual.profesor_id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  } else {
+    await solicitar('/api/profesores', {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, personaId }),
+    });
+  }
+}
 
-  const actualizados = usuarios.map((usuario) => {
-    if (usuario.id !== id) return usuario;
-
-    return {
-      ...usuario,
-      nombre_completo: datos.nombre_completo.trim(),
-      correo_institucional: datos.correo_institucional.trim().toLowerCase(),
-      password: datos.password?.trim() ? datos.password : usuario.password,
-      numero_documento: datos.numero_documento.trim(),
-      tipo_documento: datos.tipo_documento,
-      tipo_persona: datos.tipo_persona,
-      rol: datos.tipo_persona,
-      estado: datos.estado,
-      tipo_acceso: datos.tipo_persona === 'administrativo' ? 'administrativo' : datos.tipo_acceso,
-      membresia_estado: datos.tipo_persona === 'administrativo' ? 'no_aplica' : datos.membresia_estado,
-      membresia_tipo: datos.membresia_tipo,
-      membresia_fecha_fin: datos.membresia_fecha_fin || '',
-      sesion_activa: datos.estado === 'activo' ? usuario.sesion_activa : 0,
-    };
+export async function crearUsuario(datos) {
+  const persona = await solicitar('/api/personas', {
+    method: 'POST',
+    body: JSON.stringify(datosPersona(datos)),
   });
-
-  guardarUsuarios(actualizados);
-  return actualizados;
+  try {
+    await guardarPerfilProfesor(persona._id, datos);
+    await guardarMembresia(persona._id, datos);
+  } catch (error) {
+    error.message = `La persona se creó, pero faltó guardar información complementaria: ${error.message}`;
+    throw error;
+  }
+  return normalizarPersona(persona, null, null);
 }
 
-export function cambiarEstadoUsuario(id, estado) {
-  const usuarios = obtenerUsuarios();
-  const actualizados = usuarios.map((usuario) =>
-    usuario.id === id
-      ? { ...usuario, estado, sesion_activa: estado === 'activo' ? usuario.sesion_activa : 0 }
-      : usuario
-  );
+export async function actualizarUsuario(id, datos, usuarioActual) {
+  const persona = await solicitar(`/api/personas/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(datosPersona(datos)),
+  });
+  await guardarPerfilProfesor(persona._id, datos, usuarioActual);
+  await guardarMembresia(persona._id, datos, usuarioActual);
+  return persona;
+}
 
-  guardarUsuarios(actualizados);
-  return actualizados;
+export async function cambiarEstadoUsuario(id, estado) {
+  return solicitar(`/api/personas/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ estado }),
+  });
 }
