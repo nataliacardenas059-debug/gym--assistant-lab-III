@@ -1,3 +1,5 @@
+import { encabezadoAutorizacion, manejarSesionVencida } from '../modules/acceso/sesion';
+
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 async function solicitar(ruta, opciones = {}) {
@@ -7,6 +9,7 @@ async function solicitar(ruta, opciones = {}) {
       ...opciones,
       headers: {
         ...(opciones.body ? { 'Content-Type': 'application/json' } : {}),
+        ...encabezadoAutorizacion(),
         ...opciones.headers,
       },
     });
@@ -16,6 +19,7 @@ async function solicitar(ruta, opciones = {}) {
 
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
+    manejarSesionVencida(respuesta);
     const detalle = Array.isArray(datos.errores) ? `: ${datos.errores.join(', ')}` : '';
     throw new Error(`${datos.mensaje || `Error ${respuesta.status} al consultar el servidor.`}${detalle}`);
   }

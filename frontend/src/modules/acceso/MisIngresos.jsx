@@ -13,9 +13,9 @@ export default function MisIngresos({ usuarioId, recargar }) {
 
   useEffect(() => {
     let activo = true;
-    obtenerHistorial(usuarioId).then((datos) => {
-      if (activo) setRegistros(datos);
-    });
+    obtenerHistorial()
+      .then((datos) => { if (activo) setRegistros(datos); })
+      .catch(() => { if (activo) setRegistros([]); });
     return () => { activo = false; };
   }, [usuarioId, recargar]);
 

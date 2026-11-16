@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { rutaInicio, useAuth } from './AuthContext';
-import { crearPassword, iniciarSesion, USAR_SIMULADO } from './authService';
+import { crearPassword, iniciarSesion, LONGITUD_MINIMA_PASSWORD } from './authService';
 import './acceso.css';
 
 export default function LoginPage() {
@@ -13,8 +13,10 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
-  // Paso 2: primer ingreso (reemplaza el prompt() del HTML original)
-  const [idPrimerIngreso, setIdPrimerIngreso] = useState(null);
+  // Paso 2: primer ingreso. Se pide el documento para confirmar la identidad.
+  const [correoPrimerIngreso, setCorreoPrimerIngreso] = useState(null);
+  const [documento, setDocumento] = useState('');
+  const [mensaje, setMensaje] = useState('');
   const [nueva, setNueva] = useState('');
   const [confirmar, setConfirmar] = useState('');
 
@@ -23,11 +25,12 @@ export default function LoginPage() {
   async function enviarLogin(e) {
     e.preventDefault();
     setError('');
+    setMensaje('');
     setCargando(true);
     try {
       const res = await iniciarSesion(correo, password);
       if (res.primerIngreso) {
-        setIdPrimerIngreso(res.id);
+        setCorreoPrimerIngreso(res.correo);
         return;
       }
       entrar(res.usuario);
@@ -42,18 +45,22 @@ export default function LoginPage() {
   async function enviarNuevaPassword(e) {
     e.preventDefault();
     setError('');
-    if (nueva.length < 4) return setError('La contraseña debe tener al menos 4 caracteres');
+    if (!documento.trim()) return setError('Ingresa tu número de documento');
+    if (nueva.length < LONGITUD_MINIMA_PASSWORD) {
+      return setError(`La contraseña debe tener al menos ${LONGITUD_MINIMA_PASSWORD} caracteres`);
+    }
     if (nueva !== confirmar) return setError('Las contraseñas no coinciden');
 
     setCargando(true);
     try {
-      await crearPassword(idPrimerIngreso, nueva);
-      setIdPrimerIngreso(null);
+      await crearPassword(correoPrimerIngreso, documento, nueva);
+      setCorreoPrimerIngreso(null);
       setPassword('');
+      setDocumento('');
       setNueva('');
       setConfirmar('');
       setError('');
-      alert('Contraseña creada. Ahora inicia sesión.');
+      setMensaje('Contraseña creada. Ahora inicia sesión.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -66,7 +73,7 @@ export default function LoginPage() {
       <div className="acc-login-card">
         <h2>🏋️ GymAssistant</h2>
 
-        {idPrimerIngreso === null ? (
+        {correoPrimerIngreso === null ? (
           <form onSubmit={enviarLogin}>
             <p>Acceso al sistema</p>
             <input
@@ -89,13 +96,19 @@ export default function LoginPage() {
           </form>
         ) : (
           <form onSubmit={enviarNuevaPassword}>
-            <p>Es tu primer ingreso. Crea una contraseña.</p>
+            <p>Es tu primer ingreso. Confirma tu documento y crea una contraseña.</p>
+            <input
+              type="text"
+              placeholder="Número de documento"
+              value={documento}
+              onChange={(e) => setDocumento(e.target.value)}
+              autoFocus
+            />
             <input
               type="password"
               placeholder="Nueva contraseña"
               value={nueva}
               onChange={(e) => setNueva(e.target.value)}
-              autoFocus
             />
             <input
               type="password"
@@ -106,16 +119,18 @@ export default function LoginPage() {
             <button className="acc-btn-primary" disabled={cargando}>
               {cargando ? 'Guardando...' : 'Crear contraseña'}
             </button>
+            <button
+              type="button"
+              className="acc-btn-link"
+              onClick={() => { setCorreoPrimerIngreso(null); setError(''); }}
+            >
+              Volver
+            </button>
           </form>
         )}
 
         {error && <p className="acc-error">{error}</p>}
-
-        {USAR_SIMULADO && idPrimerIngreso === null && (
-          <p className="acc-demo">
-            Recepción: admin@gymassistant.com / 123456 · Usuarios de prueba: contraseña gym123
-          </p>
-        )}
+        {mensaje && <p className="acc-demo">{mensaje}</p>}
       </div>
     </div>
   );
